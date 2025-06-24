@@ -6,15 +6,30 @@ use totp_lite::{totp_custom, Sha1, DEFAULT_STEP};
 use base32::Alphabet::Rfc4648;
 
 fn main() {
-  let mut args = env::args().skip(1);
-  let secret = match args.next() {
-    Some(arg) => arg,
-    None => input("Enter the secret")
-  };
+  let mut copy = false;
+  let mut quiet = false;
 
+  let mut args = env::args().skip(1);
+  while let Some(arg) = args.next() {
+    match arg.as_str() {
+      "--copy" | "-c" => copy = true,
+      "--quiet" | "-q" => quiet = true,
+      _ => {
+        eprintln!("Unexpected argument: {}", arg);
+        return
+      }
+    }
+  }
+
+  if quiet && !copy {
+    eprintln!("Nothing to do: either remove --quiet or add --copy");
+    return
+  }
+
+  let secret = input("Enter the secret");
   let length = secret.len();
   if length != 16 && length != 26 && length != 32 {
-    println!("Invalid secret");
+    eprintln!("Invalid secret");
     return
   }
 
@@ -24,27 +39,45 @@ fn main() {
   ) {
     Some(decoded) => decoded,
     None => {
-      println!("Failed to decode secret");
+      eprintln!("Failed to decode secret");
       return
     }
   };
 
-  let seconds: u64 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-  let result = totp_custom::<Sha1>(DEFAULT_STEP, 6, &decoded_secret, seconds);
-  println!("{}", result);
+  let seconds: u64 = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .unwrap()
+    .as_secs();
 
-  add_to_clipboard(&result);
+  let result = totp_custom::<Sha1>(
+    DEFAULT_STEP,
+    6,
+    &decoded_secret,
+    seconds
+  );
+
+  if !quiet {
+    println!("{}", result);
+  }
+
+  if copy {
+    add_to_clipboard(&result);
+  }
 }
 
 fn input(prompt: &str) -> String {
   print!("{}: ", prompt);
   io::stdout().flush().unwrap();
   let mut buf = String::new();
-  io::stdin().read_line(&mut buf).expect("Failed to read input");
+  io::stdin()
+    .read_line(&mut buf)
+    .expect("Failed to read input");
   buf.trim().to_string()
 }
 
 fn add_to_clipboard(text: &str) {
-  let mut clipboard = Clipboard::new().expect("Failed to access clipboard");
-  clipboard.set_text(text).expect("Failed to copy text");
+  let mut clipboard = Clipboard::new()
+    .expect("Failed to access clipboard");
+  clipboard.set_text(text)
+    .expect("Failed to copy text");
 }
