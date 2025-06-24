@@ -1,7 +1,7 @@
-use std::io::{self, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::env;
 use arboard::Clipboard;
+use rpassword::prompt_password;
 use totp_lite::{totp_custom, Sha1, DEFAULT_STEP};
 use base32::Alphabet::Rfc4648;
 
@@ -26,7 +26,8 @@ fn main() {
     return
   }
 
-  let secret = input("Enter the secret");
+  let secret = prompt_password("Enter the secret: ")
+    .expect("Failed to read secret");
   let length = secret.len();
   if length != 16 && length != 26 && length != 32 {
     eprintln!("Invalid secret");
@@ -63,16 +64,6 @@ fn main() {
   if copy {
     add_to_clipboard(&result);
   }
-}
-
-fn input(prompt: &str) -> String {
-  print!("{}: ", prompt);
-  io::stdout().flush().unwrap();
-  let mut buf = String::new();
-  io::stdin()
-    .read_line(&mut buf)
-    .expect("Failed to read input");
-  buf.trim().to_string()
 }
 
 fn add_to_clipboard(text: &str) {
