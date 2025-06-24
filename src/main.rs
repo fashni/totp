@@ -1,6 +1,7 @@
 use std::io::{self, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::env;
+use arboard::Clipboard;
 use totp_lite::{totp_custom, Sha1, DEFAULT_STEP};
 use base32::Alphabet::Rfc4648;
 
@@ -31,6 +32,8 @@ fn main() {
   let seconds: u64 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
   let result = totp_custom::<Sha1>(DEFAULT_STEP, 6, &decoded_secret, seconds);
   println!("{}", result);
+
+  add_to_clipboard(&result);
 }
 
 fn input(prompt: &str) -> String {
@@ -39,4 +42,9 @@ fn input(prompt: &str) -> String {
   let mut buf = String::new();
   io::stdin().read_line(&mut buf).expect("Failed to read input");
   buf.trim().to_string()
+}
+
+fn add_to_clipboard(text: &str) {
+  let mut clipboard = Clipboard::new().expect("Failed to access clipboard");
+  clipboard.set_text(text).expect("Failed to copy text");
 }
